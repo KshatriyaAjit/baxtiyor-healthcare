@@ -47,3 +47,9 @@ next-env.d.ts
 # Local test data
 /test-data/
 /tmp/
+
+# Firebase
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
