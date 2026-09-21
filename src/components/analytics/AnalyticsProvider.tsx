@@ -2,7 +2,9 @@
 
 import React, { useEffect } from 'react';
 import Script from 'next/script';
+import { usePathname } from 'next/navigation';
 import { Locale } from '@/types';
+import { trackPageView } from '@/lib/analytics/tracker';
 
 interface AnalyticsProviderProps {
   children: React.ReactNode;
@@ -13,8 +15,17 @@ const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '';
 const GTM_CONTAINER_ID = process.env.NEXT_PUBLIC_GTM_CONTAINER_ID || '';
 
 export function AnalyticsProvider({ children, locale }: AnalyticsProviderProps) {
+  const pathname = usePathname();
+
+  // Deduplicated automatic route transition tracking
   useEffect(() => {
-    // Keep client-side state synchronized if locale changes
+    if (pathname) {
+      trackPageView(pathname, locale);
+    }
+  }, [pathname, locale]);
+
+  // Keep client-side state synchronized if locale changes
+  useEffect(() => {
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: 'site_locale_changed',
@@ -85,4 +96,3 @@ export function AnalyticsProvider({ children, locale }: AnalyticsProviderProps) 
     </>
   );
 }
-

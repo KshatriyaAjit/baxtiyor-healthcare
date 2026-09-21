@@ -132,4 +132,32 @@ Executed on 2026-09-21 against the production build using `scripts/phase17-post-
 | **17.11**| Accessibility (WCAG 2.2 AA)| Skip link (`#main-content`), semantic landmark tags | 2 Passed | `[PASS]` |
 | **17.12**| HTTP Security Headers | X-Frame-Options, X-Content-Type, HSTS, Permissions-Policy | 4 Passed | `[PASS]` |
 
+---
+
+## 9. Admin Dashboard & Operations Verification (Phase 18 Audit)
+
+Executed on 2026-09-21 against the live production build using `scripts/test-admin-phase18.mjs`.
+
+- **Total Evaluated Checks:** 26
+- **Passed Checks:** 26 `[PASS]`
+- **Failed Checks:** 0 `[FAIL]`
+- **Success Rate:** 100%
+
+### Detailed Phase 18 Audit Results
+| Suite ID | Audit Area | Checks | Result | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **18.1** | Unauthenticated Route Protection | `/admin`, `/admin/leads`, `/admin/analytics`, `/admin/operations`, `/admin/settings` (307 redirect) | 5 Passed | `[PASS]` |
+| **18.2** | Unauthenticated API Protection | `/api/admin/auth/me`, `/api/admin/leads`, `/api/admin/analytics`, `/api/admin/operations`, `/api/admin/audit-logs`, `/api/admin/reports/*` (HTTP 401) | 6 Passed | `[PASS]` |
+| **18.3** | Login Page Accessibility | `/admin/login` SSR renders branded portal with status 200 | 1 Passed | `[PASS]` |
+| **18.4** | Invalid Authentication Handling | POST `/api/admin/auth/login` with invalid credentials returns HTTP 401 | 1 Passed | `[PASS]` |
+| **18.5** | Valid Auth & Session Cookies | POST `/api/admin/auth/login` returns HTTP 200 and sets `admin_session` cookie with HttpOnly | 2 Passed | `[PASS]` |
+| **18.6** | Authenticated Profile & Operations | GET `/api/admin/auth/me` returns `super_admin` profile; `/api/admin/operations` returns telemetry | 2 Passed | `[PASS]` |
+| **18.7** | Operational Leads Triage & Filtering | GET `/api/admin/leads` retrieves operational lead queue with search and status support | 1 Passed | `[PASS]` |
+| **18.8** | 13-Stage Workflow Progression | PATCH `/api/admin/leads/[id]` updates workflow status and assigns coordinator with audit trail | 2 Passed | `[PASS]` |
+| **18.9** | Private Report Access & Anti-Traversal | Authenticated streaming of medical PDFs; path traversal `..%2F` safely blocked with 404 | 2 Passed | `[PASS]` |
+| **18.10**| Period Analytics & Conversion Funnel | GET `/api/admin/analytics?period=7d` returns period-filtered funnel drop-off metrics | 1 Passed | `[PASS]` |
+| **18.11**| Logout & Session Termination | POST `/api/admin/auth/logout` invalidates session and clears `admin_session` cookie | 2 Passed | `[PASS]` |
+| **18.12**| Secret Scan & PII Leak Defense | Static scan confirms zero hardcoded admin passwords in tracked source files | 1 Passed | `[PASS]` |
+
+
 

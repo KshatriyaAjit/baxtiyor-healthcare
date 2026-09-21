@@ -7,7 +7,14 @@ import { Button } from '@/components/ui/Button';
 import { SPECIALTIES } from '@/data/specialties';
 import { COUNTRIES } from '@/data/countries';
 import { Upload, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
-import { trackLeadSubmission } from '@/lib/analytics/tracker';
+import {
+  trackLeadSubmission,
+  trackLeadFormStart,
+  trackLeadFormError,
+  trackReportUploadStart,
+  trackReportUploadComplete,
+  trackReportUploadError,
+} from '@/lib/analytics/tracker';
 
 export interface LeadFormProps {
   locale: Locale;
@@ -38,8 +45,20 @@ export function LeadForm({
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [formStarted, setFormStarted] = useState(false);
+
+  const handleFieldInteraction = () => {
+    if (!formStarted) {
+      setFormStarted(true);
+      trackLeadFormStart(
+        locale,
+        typeof window !== 'undefined' ? window.location.pathname : ''
+      );
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFieldInteraction();
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
       // Validate file size (max 15MB per file)
@@ -50,10 +69,12 @@ export function LeadForm({
             ? 'حجم أحد الملفات يتجاوز 15 ميجابايت. يرجى اختيار ملف أصغر حجماً.'
             : 'File size exceeds 15MB. Please upload a smaller document.'
         );
+        trackReportUploadError(locale, 'file_size_exceeded');
         return;
       }
       setErrorMessage('');
       setFiles((prev) => [...prev, ...selectedFiles].slice(0, 5));
+      trackReportUploadStart(locale, selectedFiles.length);
     }
   };
 
@@ -67,6 +88,7 @@ export function LeadForm({
           ? 'يرجى إدخال اسم المريض ورقم الواتساب للتواصل.'
           : 'Please provide patient name and WhatsApp number.'
       );
+      trackLeadFormError(locale, 'validation_missing_contact');
       return;
     }
 
@@ -87,6 +109,9 @@ export function LeadForm({
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json();
           uploadedFileCount = uploadData.count || files.length;
+          trackReportUploadComplete(locale, uploadedFileCount);
+        } else {
+          trackReportUploadError(locale, 'upload_failed');
         }
       }
 
@@ -114,11 +139,12 @@ export function LeadForm({
         country: formData.country,
         hasReports: files.length > 0,
         fileCount: uploadedFileCount,
-        score: resData.lead?.score || (files.length > 0 ? 'HIGH' : 'MEDIUM'),
+        score: resData.score || (files.length > 0 ? 'HIGH' : 'MEDIUM'),
       });
 
       setSuccess(true);
     } catch (err) {
+      trackLeadFormError(locale, 'server_error');
       setErrorMessage(
         isArabic
           ? 'حدث خطأ أثناء إرسال الطلب. يرجى المحاولة ثانية أو التواصل مباشرة عبر واتساب.'
@@ -189,6 +215,7 @@ export function LeadForm({
             required
             placeholder={isArabic ? 'مثال: أحمد محمد' : 'e.g., Alex Carter'}
             value={formData.name}
+            onFocus={handleFieldInteraction}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             className="w-full px-3.5 py-2.5 rounded-lg border border-brand-border focus:ring-2 focus:ring-brand-blue focus:border-transparent text-sm"
           />
@@ -204,6 +231,7 @@ export function LeadForm({
             required
             placeholder={isArabic ? '+968 9123 4567' : '+968 9123 4567'}
             value={formData.whatsapp}
+            onFocus={handleFieldInteraction}
             onChange={(e) =>
               setFormData({ ...formData, whatsapp: e.target.value })
             }

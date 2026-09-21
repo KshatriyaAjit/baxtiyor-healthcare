@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Leads collection: Contains patient inquiry information.
+    // Absolutely DENY all direct client-side read and write access.
+    // Ingestion must strictly occur via trusted server-side API routes using Firebase Admin SDK.
+    match /leads/{leadId} {
+      allow read, write: if false;
+    }
+
+    // Default security posture: DENY all client-side read and write access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

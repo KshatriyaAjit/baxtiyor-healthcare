@@ -3,6 +3,7 @@ import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
 import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
+import { getFirestoreDb } from '@/lib/firebase/admin';
 
 const LeadSchema = z.object({
   name: z.string().min(2),
@@ -20,16 +21,47 @@ const LeadSchema = z.object({
   uploaded_file_count: z.number().default(0),
 });
 
+/**
+ * Persists lead to local storage fallback if Firestore is offline or unconfigured.
+ */
+function saveToLocalFallback(leadRecord: Record<string, unknown>) {
+  try {
+    const storageDir = path.join(process.cwd(), 'storage');
+    if (!fs.existsSync(storageDir)) {
+      fs.mkdirSync(storageDir, { recursive: true });
+    }
+
+    const leadsFile = path.join(storageDir, 'leads.json');
+    let leads: unknown[] = [];
+    if (fs.existsSync(leadsFile)) {
+      try {
+        leads = JSON.parse(fs.readFileSync(leadsFile, 'utf-8'));
+      } catch (e) {
+        leads = [];
+      }
+    }
+
+    leads.push(leadRecord);
+    fs.writeFileSync(leadsFile, JSON.stringify(leads, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[Storage Error] Failed to write to local fallback:', err);
+  }
+}
+
 export async function POST(request: Request) {
   // Enforce IP-based rate limiting (10 inquiries per 15 minutes)
   const clientIp = getClientIdentifier(request);
-  const rateLimit = checkRateLimit(`lead:${clientIp}`, { limit: 10, windowMs: 15 * 60 * 1000 });
+  const rateLimit = checkRateLimit(`lead:${clientIp}`, {
+    limit: 10,
+    windowMs: 15 * 60 * 1000,
+  });
 
   if (!rateLimit.success) {
     return NextResponse.json(
       {
         success: false,
-        message: 'Too many requests. Please wait a few minutes before submitting another inquiry.',
+        message:
+          'Too many requests. Please wait a few minutes before submitting another inquiry.',
       },
       {
         status: 429,
@@ -46,39 +78,54 @@ export async function POST(request: Request) {
 
     // Compute Lead Intent Score
     let score: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
-    if (validatedData.report_uploaded && validatedData.treatment !== 'General Consultation') {
+    if (
+      validatedData.report_uploaded &&
+      validatedData.treatment !== 'General Consultation'
+    ) {
       score = 'HIGH';
     } else if (validatedData.treatment !== 'General Consultation') {
       score = 'MEDIUM';
     }
 
-    const leadId = `LEAD-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const leadId = `LEAD-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 7)}`;
+    const nowIso = new Date().toISOString();
+
     const newLead = {
       lead_id: leadId,
-      created_at: new Date().toISOString(),
+      created_at: nowIso,
+      updated_at: nowIso,
       ...validatedData,
       score,
       status: 'NEW',
     };
 
-    // Store in secure server-side storage
-    const storageDir = path.join(process.cwd(), 'storage');
-    if (!fs.existsSync(storageDir)) {
-      fs.mkdirSync(storageDir, { recursive: true });
-    }
+    let persistedToFirestore = false;
+    const db = getFirestoreDb();
 
-    const leadsFile = path.join(storageDir, 'leads.json');
-    let leads: unknown[] = [];
-    if (fs.existsSync(leadsFile)) {
+    if (db) {
       try {
-        leads = JSON.parse(fs.readFileSync(leadsFile, 'utf-8'));
-      } catch (e) {
-        leads = [];
+        await db.collection('leads').doc(leadId).set({
+          ...newLead,
+          storage_target: 'firestore',
+        });
+        persistedToFirestore = true;
+      } catch (firestoreErr) {
+        console.warn(
+          '[Firestore Write Failed - Using Fallback]:',
+          firestoreErr
+        );
       }
     }
 
-    leads.push(newLead);
-    fs.writeFileSync(leadsFile, JSON.stringify(leads, null, 2), 'utf-8');
+    // If Firestore is not configured or failed, preserve in local server storage
+    if (!persistedToFirestore) {
+      saveToLocalFallback({
+        ...newLead,
+        storage_target: 'local_fallback',
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -99,4 +146,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

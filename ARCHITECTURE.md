@@ -262,3 +262,41 @@ interface Lead {
   - Next/Font with `display: swap` for zero font-induced CLS.
   - Server components by default, reserving client components strictly for interactive modals and forms.
 
+---
+
+## 9. Admin Dashboard & Clinical Operations Architecture
+
+### 9.1 Authentication & Session Subsystem
+- **Abstraction:** `AdminAuthService` interface with `EnvAuthService` (current development engine) and `FirebaseAuthService` (drop-in production interface).
+- **Session Tokens:** HMAC-SHA256 signed using the universal Web Crypto API (`crypto.subtle`) over a binary session payload `email:role:issuedAt:expiresAt`.
+- **Cookies:** Stored in HttpOnly, SameSite=Lax, Path=/ cookies named `admin_session`.
+- **Route Guard:** Next.js `middleware.ts` guards all `/admin/*` pages (307 redirect) and `/api/admin/*` API routes (401 response).
+- **Rate Limiting:** Brute-force defense limits login attempts to 5 per 15-minute sliding window per IP.
+
+### 9.2 13-Stage Cross-Border Clinical Workflow
+```
+[ NEW ] ➔ [ CONTACTED ] ➔ [ MEDICAL_REVIEW ] ➔ [ ESTIMATE_SENT ] ➔ [ PATIENT_ACCEPTED ]
+                                                                           │
+┌──────────────────────────────────────────────────────────────────────────┘
+▼
+[ VISA_ASSISTANCE ] ➔ [ TRAVEL_BOOKED ] ➔ [ ADMITTED ] ➔ [ TREATMENT_IN_PROGRESS ]
+                                                                   │
+┌──────────────────────────────────────────────────────────────────┘
+▼
+[ DISCHARGED ] ➔ [ FOLLOW_UP ] ➔ [ CONVERTED ]  (or [ LOST ] at any juncture)
+```
+
+### 9.3 Medical Report Vault Security
+- Diagnostic medical scans (`storage/reports/`) are strictly isolated from the public web root.
+- Accessible only via `/api/admin/reports/[fileId]` requiring active admin authentication.
+- Strict path traversal protection blocks `../` directory escapes.
+
+### 9.4 Audit Trail Subsystem
+- Immutable audit stream logs all critical administrative actions:
+  - Administrative logins & logouts
+  - Lead workflow status transitions
+  - Coordinator assignments
+  - Medical report access and downloads
+- Persisted to Cloud Firestore (`admin_audit_logs` collection) with safe local fallback (`storage/admin_audit_logs.json`).
+
+

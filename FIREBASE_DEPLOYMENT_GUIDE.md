@@ -23,10 +23,13 @@ const firebaseConfig = {
 ### What Has Been Configured in the Project:
 1. **`.env.local`:** Configured with all `NEXT_PUBLIC_FIREBASE_*` variables and `NEXT_PUBLIC_GA_MEASUREMENT_ID=G-G7LBLQQZ2Y`.
 2. **`src/lib/firebase/config.ts`:** Centralized SSR-safe singleton initializing `FirebaseApp` and `FirebaseAnalytics`.
-3. **`.firebaserc`:** Pre-configured with active project `baxtiyor-healthcare`.
-4. **`firebase.json`:** Configured with HTTP security headers (`X-Frame-Options: DENY`, `nosniff`, `HSTS`, `Permissions-Policy`) and Next.js static asset caching rules.
-5. **`apphosting.yaml`:** Configured with production environment variables for Firebase App Hosting.
-6. **`.gitignore`:** Hardened to protect `.firebase/` cache and local environment secrets.
+3. **`src/lib/firebase/admin.ts`:** Server-only Firebase Admin SDK module with resilient local fallback.
+4. **`src/lib/analytics/firebase-adapter.ts`:** Privacy-first analytics adapter enforcing strict zero-leak PII filtering.
+5. **`firestore.rules`:** Production rules strictly denying direct client-side read/write to `leads`.
+6. **`.firebaserc`:** Pre-configured with active project `baxtiyor-healthcare`.
+7. **`firebase.json`:** Configured with Firestore rules, HTTP security headers, and static caching rules.
+8. **`apphosting.yaml`:** Configured with production environment variables for Firebase App Hosting.
+9. **`scripts/migrate-leads-to-firestore.mjs`:** Safe historical lead migration utility.
 
 ---
 
@@ -46,7 +49,39 @@ npx firebase-tools projects:list
 
 ---
 
-## 3. Choose Your Firebase Deployment Method
+## 3. Deploying Firestore Security Rules
+
+Before ingesting live production leads into Firestore, deploy the security rules to protect patient records:
+
+```powershell
+npx firebase-tools deploy --only firestore:rules
+```
+
+This guarantees that:
+- Anonymous website visitors cannot read or query lead documents.
+- Lead submissions must flow strictly through the server-side `/api/leads` route.
+
+---
+
+## 4. Historical Lead Migration
+
+If you have historical test or production leads stored in `storage/leads.json`:
+
+1. **Perform a dry-run (simulation with zero remote writes):**
+   ```powershell
+   node scripts/migrate-leads-to-firestore.mjs --dry-run
+   ```
+2. **Perform live migration (requires Admin credentials in env):**
+   ```powershell
+   $env:FIREBASE_SERVICE_ACCOUNT_KEY = Get-Content -Raw ./service-account.json
+   node scripts/migrate-leads-to-firestore.mjs
+   ```
+
+*The migration tool creates a safe backup (`storage/leads.json.bak-<timestamp>`), uses `{ merge: true }` to prevent overwrites, and preserves the original file.*
+
+---
+
+## 5. Choose Your Firebase Deployment Method
 
 ### OPTION A: Firebase App Hosting (Recommended for Next.js Full-Stack)
 
@@ -119,7 +154,7 @@ If your Firebase project is on the **Free Spark Plan** and you want zero-cost ho
 
 ---
 
-## 4. Connecting Your Custom Domain (`baxtiyorhealthcare.com`)
+## 6. Connecting Your Custom Domain (`baxtiyorhealthcare.com`)
 
 Once deployed to Firebase:
 1. Go to [Firebase Console > Hosting](https://console.firebase.google.com/project/baxtiyor-healthcare/hosting).
@@ -131,10 +166,11 @@ Once deployed to Firebase:
 
 ---
 
-## 5. Verification Checklist After Deployment
+## 7. Zero-Leak Analytics Verification
 
-- [ ] Visit `https://baxtiyor-healthcare.web.app` (or custom domain).
-- [ ] Confirm both languages load: `/en` and `/ar` (with RTL).
-- [ ] Test the WhatsApp button to ensure it opens with pre-filled coordinator message.
-- [ ] Check Google Analytics Real-Time report for Measurement ID `G-G7LBLQQZ2Y`.
-
+To verify that Firebase Analytics is receiving events without leaking sensitive patient data:
+1. Open [Firebase Console > Analytics > DebugView](https://console.firebase.google.com/project/baxtiyor-healthcare/analytics/debugview).
+2. Browse the website in development with Google Analytics Debugger Chrome extension enabled.
+3. Observe events: `page_view`, `lead_form_start`, `cta_click`, `whatsapp_click`.
+4. Inspect event parameters: confirm only `locale`, `page_path`, `treatment_category`, `file_count` are transmitted.
+5. Confirm that **zero** patient names, phone numbers, or uploaded document filenames ever appear in event payloads.

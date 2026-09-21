@@ -62,3 +62,17 @@ This document logs all foundational technical, product, UX, and SEO decisions ma
 - **Date:** 2026-09-21
 - **Status:** Approved / Architecture Foundation
 
+---
+
+### DEC-013: Temporary Development Admin Authentication & Future Firebase Auth Migration Architecture
+
+- **Decision:** Implement internal administrative dashboard authentication using environment-based credentials (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`) via an `AdminAuthService` interface with HMAC-SHA256 signed session cookies, protected by Next.js middleware and sliding-window rate limiting. Prepare a drop-in `FirebaseAuthService` interface for future migration without modifying dashboard pages, route handlers, or lead managers.
+- **Reason:**
+  1. Immediate Operational Need: Development and internal operations need access to triage leads, review clinical status workflows, and inspect private medical reports immediately without waiting for complex external OAuth setups.
+  2. Zero Hardcoded Credentials: All secrets reside in server-side environment variables and are evaluated with constant-time equality comparisons (`crypto.timingSafeEqual`) to prevent side-channel timing attacks.
+  3. Clean Migration Path: Adhering to the Dependency Inversion Principle ensures switching to Firebase Authentication requires updating only the underlying service implementation (`FirebaseAuthService`) with zero UI or route rewrites.
+  4. Privacy & Healthcare Compliance: Medical records remain strictly isolated behind authenticated streaming endpoints (`/api/admin/reports/[fileId]`) with rigorous path traversal protection.
+- **Date:** 2026-09-21
+- **Status:** Approved / Implemented & Verified
+
+
