@@ -4,6 +4,8 @@ import { Locale } from '@/types';
 import { getDictionary } from '@/lib/i18n/dictionaries';
 import { getLocalizedPath } from '@/lib/i18n/config';
 import { Phone, MessageCircle, Mail, MapPin, ShieldAlert } from 'lucide-react';
+import { SITE_CONTACT, getWhatsAppUrl } from '@/lib/config/contact';
+import { SocialLinksRow } from '@/components/common/SocialLinksRow';
 
 export interface FooterProps {
   locale: Locale;
@@ -41,15 +43,44 @@ export function Footer({ locale }: FooterProps) {
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-brand-teal shrink-0" />
                 <span>Gurugram (Delhi NCR), Haryana, India</span>
+                <span>{SITE_CONTACT.location.city}, {SITE_CONTACT.location.state}, {SITE_CONTACT.location.country}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-brand-teal shrink-0" />
                 <span dir="ltr">+91 99999 99999</span>
+                <a
+                  href={`tel:${SITE_CONTACT.phoneNumber}`}
+                  className="hover:text-brand-teal transition-colors"
+                  dir="ltr"
+                >
+                  {SITE_CONTACT.phoneNumber}
+                </a>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-brand-teal shrink-0" />
+                <a
+                  href={`mailto:${SITE_CONTACT.email}`}
+                  className="hover:text-brand-teal transition-colors"
+                >
+                  {SITE_CONTACT.email}
+                </a>
               </div>
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-[#25D366] shrink-0" />
                 <span>WhatsApp Coordination Desk available 24/7</span>
+                <a
+                  href={getWhatsAppUrl({ locale, sourceContext: 'homepage' })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#25D366] transition-colors"
+                >
+                  {isArabic ? 'مكتب التنسيق عبر الواتساب متاح 24/7' : 'WhatsApp Coordination Desk available 24/7'}
+                </a>
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-700/60">
+              <SocialLinksRow locale={locale} />
             </div>
           </div>
 

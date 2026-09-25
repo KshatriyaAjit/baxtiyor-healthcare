@@ -53,3 +53,10 @@ next-env.d.ts
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
+
+# Secrets & Service Account Keys
+/secrets/
+/service-account.json
+/*-firebase-adminsdk-*.json
+*firebase-adminsdk*.json
+*.pem

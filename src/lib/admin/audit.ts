@@ -12,7 +12,17 @@ export type AuditAction =
   | 'lead.coordinator_assigned'
   | 'lead.detail_viewed'
   | 'report.accessed'
-  | 'settings.updated';
+  | 'settings.updated'
+  | string;
+
+export interface LogAdminActionParams {
+  adminEmail: string;
+  action: string;
+  target?: string;
+  targetId?: string;
+  details?: Record<string, unknown>;
+  ipAddress?: string;
+}
 
 export interface AuditLogEntry {
   id: string;
@@ -130,5 +140,18 @@ export async function getRecentAuditLogs(limitCount = 50): Promise<AuditLogEntry
   }
 
   return [];
+}
+
+/**
+ * Universal admin audit log helper for Content & System mutations.
+ */
+export async function logAdminAction(params: LogAdminActionParams): Promise<void> {
+  const { adminEmail, action, target, targetId, details = {}, ipAddress = '127.0.0.1' } = params;
+  return recordAuditLog(
+    action as AuditAction,
+    adminEmail,
+    ipAddress,
+    { target, targetId, ...details }
+  );
 }
 

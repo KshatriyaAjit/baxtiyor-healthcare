@@ -24,6 +24,10 @@ const ALLOWED_ANALYTICS_KEYS = new Set([
   'target_locale',
   'reason',
   'error_type',
+  'language',
+  'content_id',
+  'content_slug',
+  'social_platform',
 ]);
 
 const FORBIDDEN_KEYS = new Set([

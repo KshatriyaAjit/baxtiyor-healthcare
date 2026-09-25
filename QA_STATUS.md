@@ -23,6 +23,12 @@ Legend:
 | FT-06 | Phone CTA | Tap-to-call initiates correct international patient assistance number | `[PASS]` | 2026-09-21 |
 | FT-07 | Indicative Cost Calculator | Filters and selects procedure and renders range without broken UI | `[PASS]` | 2026-09-21 |
 | FT-08 | 404 Custom Error Handling | Non-existent URLs render branded, helpful 404 page with search/links | `[PASS]` | 2026-09-21 |
+| FT-09 | Admin Content & Media Hub | Upload, category filter, published toggle, deletion of media | `[PASS]` | 2026-09-25 |
+| FT-10 | YouTube Channel Curation | Extraction of 11-char ID from @baxtiyorindiya, VideoObject JSON-LD | `[PASS]` | 2026-09-25 |
+| FT-11 | Patient Stories & Consent | Explicit consentStatus filtering, unapproved stories hidden | `[PASS]` | 2026-09-25 |
+| FT-12 | Verified Testimonials | Authentic quotes, zero fake star ratings, verified badges | `[PASS]` | 2026-09-25 |
+| FT-13 | Mobile Bottom Navigation | 5 fixed touch actions, safe-area padding, RTL directionality | `[PASS]` | 2026-09-25 |
+| FT-14 | Healthcare Coordination Chatbot | Non-diagnostic assistant with human coordinator escalation | `[PASS]` | 2026-09-25 |
 
 ---
 

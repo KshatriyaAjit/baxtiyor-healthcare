@@ -42,6 +42,17 @@ export type AnalyticsEventName =
   | 'form_start'
   | 'form_step_complete'
   | 'form_submit'
+  // Phase 19 Real Media, Social & Chat Conversion Events
+  | 'media_view'
+  | 'testimonial_view'
+  | 'youtube_play'
+  | 'social_click'
+  | 'call_click'
+  | 'lets_talk_click'
+  | 'chat_open'
+  | 'chat_human_request'
+  | 'chat_whatsapp_click'
+  | 'video_card_click'
   // Medical Report Upload Flow (Zero-Leak Metadata Only)
   | 'report_upload_started'
   | 'report_upload_completed'
@@ -51,9 +62,13 @@ export type AnalyticsEventName =
 export interface AnalyticsPayload {
   event: AnalyticsEventName;
   locale?: Locale;
+  language?: string;
   page_path?: string;
   page_type?: string;
   content_type?: string;
+  content_id?: string;
+  content_slug?: string;
+  social_platform?: string;
   cta_name?: string;
   cta_location?: string;
   treatment_category?: string;
@@ -91,9 +106,13 @@ export function trackEvent(
   const sanitized: AnalyticsPayload = {
     event: eventName,
     locale: payload.locale,
+    language: payload.language,
     page_path: payload.page_path || window.location.pathname,
     page_type: payload.page_type,
     content_type: payload.content_type,
+    content_id: payload.content_id,
+    content_slug: payload.content_slug,
+    social_platform: payload.social_platform,
     cta_name: payload.cta_name,
     cta_location: payload.cta_location,
     treatment_category: payload.treatment_category,

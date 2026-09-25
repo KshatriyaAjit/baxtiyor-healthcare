@@ -5,7 +5,8 @@ import { Locale } from '@/types';
 import { isValidLocale, LOCALES } from '@/lib/i18n/config';
 import { Header } from '@/components/common/Header';
 import { Footer } from '@/components/common/Footer';
-import { StickyMobileBar } from '@/components/conversion/StickyMobileBar';
+import { MobileBottomNav } from '@/components/common/MobileBottomNav';
+import { ChatWidget } from '@/components/conversion/ChatWidget';
 import { JsonLd, createOrganizationSchema } from '@/components/seo/JsonLd';
 import { AnalyticsProvider } from '@/components/analytics/AnalyticsProvider';
 
@@ -101,8 +102,9 @@ export default async function LocaleLayout({
         <AnalyticsProvider locale={currentLocale}>
           <JsonLd data={createOrganizationSchema(currentLocale)} />
           <Header locale={currentLocale} />
-          <main id="main-content" className="flex-grow">{children}</main>
-          <StickyMobileBar locale={currentLocale} />
+          <main id="main-content" className="flex-grow pb-20 lg:pb-0">{children}</main>
+          <ChatWidget locale={currentLocale} />
+          <MobileBottomNav locale={currentLocale} />
           <Footer locale={currentLocale} />
         </AnalyticsProvider>
       </body>

@@ -1,4 +1,140 @@
-'use client';
+import fs from 'fs';
+import path from 'path';
+
+console.log('--- REPAIRING CORRUPTED FILES ---');
+
+// 1. Repair src/app/admin/page.tsx
+const adminPagePath = 'src/app/admin/page.tsx';
+let adminPageContent = fs.readFileSync(adminPagePath, 'utf8');
+const dupPromise = /const \[analyticsRes, leadsRes\] = await Promise\.all\(\[\r?\n\s*const \[analyticsRes, leadsRes, contentRes\] = await Promise\.all\(\[/;
+if (dupPromise.test(adminPageContent)) {
+  adminPageContent = adminPageContent.replace(
+    dupPromise,
+    'const [analyticsRes, leadsRes, contentRes] = await Promise.all(['
+  );
+  fs.writeFileSync(adminPagePath, adminPageContent, 'utf8');
+  console.log('✅ Repaired src/app/admin/page.tsx');
+} else {
+  console.log('ℹ️ src/app/admin/page.tsx already clean or pattern not found');
+}
+
+// 2. Repair src/lib/admin/audit.ts
+const auditPath = 'src/lib/admin/audit.ts';
+let auditContent = fs.readFileSync(auditPath, 'utf8');
+const dupAudit = /\|\s*'settings\.updated';\r?\n\s*\|\s*'settings\.updated'\r?\n\s*\|\s*string;/;
+if (dupAudit.test(auditContent)) {
+  auditContent = auditContent.replace(
+    dupAudit,
+    "| 'settings.updated'\n  | string;"
+  );
+  fs.writeFileSync(auditPath, auditContent, 'utf8');
+  console.log('✅ Repaired src/lib/admin/audit.ts');
+} else {
+  console.log('ℹ️ src/lib/admin/audit.ts already clean or pattern not found');
+}
+
+// 3. Repair src/app/api/health/route.ts
+const healthPath = 'src/app/api/health/route.ts';
+let healthContent = fs.readFileSync(healthPath, 'utf8');
+const dupCatch = /\} catch \(err\) \{\r?\n\s*\} catch \{/;
+if (dupCatch.test(healthContent)) {
+  healthContent = healthContent.replace(
+    dupCatch,
+    '} catch {'
+  );
+  fs.writeFileSync(healthPath, healthContent, 'utf8');
+  console.log('✅ Repaired src/app/api/health/route.ts');
+} else {
+  console.log('ℹ️ src/app/api/health/route.ts already clean or pattern not found');
+}
+
+// 4. Repair src/app/api/admin/reports/[fileId]/route.ts
+const reportsPath = 'src/app/api/admin/reports/[fileId]/route.ts';
+const cleanReportsCode = `import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
+import { getAuthenticatedAdmin } from '@/lib/admin/auth';
+import { recordAuditLog } from '@/lib/admin/audit';
+import { getClientIdentifier } from '@/lib/security/rate-limit';
+
+const MIME_MAP: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+};
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { fileId: string } }
+) {
+  try {
+    // 1. Authenticated admin authorization only
+    const admin = await getAuthenticatedAdmin(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required to access medical reports.' },
+        { status: 401 }
+      );
+    }
+
+    const { fileId } = params;
+
+    // 2. Strict sanitization to prevent Path Traversal attacks
+    const safeFilename = path.basename(fileId);
+    if (!safeFilename || !/^[a-zA-Z0-9-_\\.]+$/.test(safeFilename) || fileId.includes('..') || fileId.includes('/') || fileId.includes('\\\\')) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid report identifier.' },
+        { status: 400 }
+      );
+    }
+
+    const storageDir = path.join(process.cwd(), 'storage', 'reports');
+    const filePath = path.join(storageDir, safeFilename);
+
+    // 3. Verify file existence in private storage
+    if (!fs.existsSync(filePath)) {
+      return NextResponse.json(
+        { success: false, message: 'Report document not found.' },
+        { status: 404 }
+      );
+    }
+
+    // 4. Record access in audit log
+    const clientIp = getClientIdentifier(request);
+    await recordAuditLog('report.accessed', admin.email, clientIp, {
+      file_id: safeFilename,
+    });
+
+    // 5. Stream the file securely
+    const ext = path.extname(safeFilename).toLowerCase();
+    const contentType = MIME_MAP[ext] || 'application/octet-stream';
+    const fileBuffer = fs.readFileSync(filePath);
+
+    return new NextResponse(fileBuffer, {
+      headers: {
+        'Content-Type': contentType,
+        'Content-Disposition': \`inline; filename="\${safeFilename}"\`,
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
+  } catch (err) {
+    console.error('[Admin Report Stream Error]:', err);
+    return NextResponse.json(
+      { success: false, message: 'Server error accessing report.' },
+      { status: 500 }
+    );
+  }
+}
+`;
+fs.writeFileSync(reportsPath, cleanReportsCode, 'utf8');
+console.log('✅ Rewrote src/app/api/admin/reports/[fileId]/route.ts cleanly');
+
+// 5. Repair src/components/admin/AdminShell.tsx
+const adminShellPath = 'src/components/admin/AdminShell.tsx';
+const cleanAdminShellCode = `'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -160,11 +296,11 @@ export function AdminShell({ children }: AdminShellProps) {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={\`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors \${
                     active
                       ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-                  }`}
+                  }\`}
                 >
                   <Icon className="w-5 h-5" />
                   <span>{item.name}</span>
@@ -221,13 +357,13 @@ export function AdminShell({ children }: AdminShellProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center space-x-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={\`flex items-center space-x-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all \${
                     active
                       ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
+                  }\`}
                 >
-                  <Icon className={`w-4 h-4 ${active ? 'text-teal-400' : 'text-slate-400'}`} />
+                  <Icon className={\`w-4 h-4 \${active ? 'text-teal-400' : 'text-slate-400'}\`} />
                   <span>{item.name}</span>
                 </Link>
               );
@@ -246,13 +382,13 @@ export function AdminShell({ children }: AdminShellProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center space-x-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={\`flex items-center space-x-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all \${
                     active
                       ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
+                  }\`}
                 >
-                  <Icon className={`w-4 h-4 ${active ? 'text-teal-400' : 'text-slate-400'}`} />
+                  <Icon className={\`w-4 h-4 \${active ? 'text-teal-400' : 'text-slate-400'}\`} />
                   <span>{item.name}</span>
                 </Link>
               );
@@ -268,13 +404,13 @@ export function AdminShell({ children }: AdminShellProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center space-x-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={\`flex items-center space-x-3 px-3.5 py-2 rounded-lg text-sm font-medium transition-all \${
                     active
                       ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
+                  }\`}
                 >
-                  <Icon className={`w-4 h-4 ${active ? 'text-teal-400' : 'text-slate-400'}`} />
+                  <Icon className={\`w-4 h-4 \${active ? 'text-teal-400' : 'text-slate-400'}\`} />
                   <span>{item.name}</span>
                 </Link>
               );
@@ -332,3 +468,9 @@ export function AdminShell({ children }: AdminShellProps) {
     </div>
   );
 }
+`;
+fs.writeFileSync(adminShellPath, cleanAdminShellCode, 'utf8');
+console.log('✅ Rewrote src/components/admin/AdminShell.tsx cleanly');
+
+console.log('--- ALL REPAIRS COMPLETED ---');
+

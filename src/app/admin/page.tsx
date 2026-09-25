@@ -15,7 +15,13 @@ import {
   RefreshCw,
   AlertCircle,
   ExternalLink,
+  Image as ImageIcon,
+  HeartHandshake,
+  MessageSquareQuote,
+  Youtube,
+  Share2,
 } from 'lucide-react';
+import { ContentSummary } from '@/types/content';
 
 interface SummaryData {
   totalLeads: number;
@@ -54,6 +60,7 @@ interface RecentLead {
 export default function AdminDashboardPage() {
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
   const [recentLeads, setRecentLeads] = useState<RecentLead[]>([]);
+  const [contentSummary, setContentSummary] = useState<ContentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,9 +68,10 @@ export default function AdminDashboardPage() {
     setLoading(true);
     setError(null);
     try {
-      const [analyticsRes, leadsRes] = await Promise.all([
+      const [analyticsRes, leadsRes, contentRes] = await Promise.all([
         fetch('/api/admin/analytics?period=30d'),
         fetch('/api/admin/leads?limit=6'),
+        fetch('/api/admin/content/summary'),
       ]);
 
       if (!analyticsRes.ok || !leadsRes.ok) {
@@ -72,9 +80,13 @@ export default function AdminDashboardPage() {
 
       const analyticsJson = await analyticsRes.json();
       const leadsJson = await leadsRes.json();
+      const contentJson = contentRes.ok ? await contentRes.json() : null;
 
       setAnalytics(analyticsJson);
       setRecentLeads(leadsJson.leads || []);
+      if (contentJson?.summary) {
+        setContentSummary(contentJson.summary);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error fetching dashboard data');
     } finally {
@@ -275,6 +287,95 @@ export default function AdminDashboardPage() {
           <div className="mt-2 text-xs text-slate-400">
             <span>CIS / Central Asia + Arab focus</span>
           </div>
+        </div>
+      </div>
+
+      {/* Content & Media Status (Phase 19) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 mb-4 border-b border-slate-800">
+          <div>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-teal-400" />
+              Content &amp; Media Status
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Live published assets from Firebase Storage &amp; Firestore
+            </p>
+          </div>
+          <Link
+            href="/admin/content/media"
+            className="text-xs text-teal-400 hover:text-teal-300 font-semibold flex items-center gap-1 self-start sm:self-auto"
+          >
+            <span>Open Media Library</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <Link
+            href="/admin/content/media"
+            className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl hover:border-slate-700 transition-colors"
+          >
+            <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+              <ImageIcon className="w-3.5 h-3.5 text-teal-400" />
+              <span>Published Photos</span>
+            </div>
+            <div className="text-xl font-bold text-white">
+              {loading ? '...' : contentSummary?.publishedPhotos ?? 0}
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/content/patient-stories"
+            className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl hover:border-slate-700 transition-colors"
+          >
+            <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+              <HeartHandshake className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Patient Stories</span>
+            </div>
+            <div className="text-xl font-bold text-white">
+              {loading ? '...' : contentSummary?.patientStories ?? 0}
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/content/testimonials"
+            className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl hover:border-slate-700 transition-colors"
+          >
+            <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+              <MessageSquareQuote className="w-3.5 h-3.5 text-blue-400" />
+              <span>Testimonials</span>
+            </div>
+            <div className="text-xl font-bold text-white">
+              {loading ? '...' : contentSummary?.testimonials ?? 0}
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/content/videos"
+            className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl hover:border-slate-700 transition-colors"
+          >
+            <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+              <Youtube className="w-3.5 h-3.5 text-red-400" />
+              <span>YouTube Videos</span>
+            </div>
+            <div className="text-xl font-bold text-white">
+              {loading ? '...' : contentSummary?.youtubeVideos ?? 0}
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/content/social"
+            className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl hover:border-slate-700 transition-colors col-span-2 sm:col-span-1"
+          >
+            <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+              <Share2 className="w-3.5 h-3.5 text-purple-400" />
+              <span>Social Channels</span>
+            </div>
+            <div className="text-xl font-bold text-white">
+              {loading ? '...' : contentSummary?.socialChannels ?? 0}
+            </div>
+          </Link>
         </div>
       </div>
 

@@ -17,6 +17,9 @@ import { PATIENT_STORIES } from '@/data/patient-stories';
 import { COUNTRIES } from '@/data/countries';
 import { TREATMENT_COSTS } from '@/data/costs';
 import { FAQS } from '@/data/faqs';
+import { getAllVideos, getAllMedia } from '@/lib/admin/content';
+import { YouTubeVideoCard } from '@/components/trust/YouTubeVideoCard';
+import { HomepageMediaGallery } from '@/components/trust/HomepageMediaGallery';
 import {
   HeartHandshake,
   ShieldCheck,
@@ -30,6 +33,8 @@ import {
   ChevronRight,
   ArrowRight,
   HelpCircle,
+  Youtube,
+  PlayCircle,
 } from 'lucide-react';
 
 export async function generateMetadata({
@@ -61,6 +66,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     : 'en';
   const dict = getDictionary(currentLocale);
   const isArabic = currentLocale === 'ar';
+  const [videos, mediaItems] = await Promise.all([
+    getAllVideos(true),
+    getAllMedia({ published: true, consentStatus: 'approved' }),
+  ]);
 
   return (
     <div className="space-y-16 lg:space-y-24 pb-16">
@@ -87,8 +96,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
               <p className="text-base sm:text-lg text-brand-text-secondary leading-relaxed max-w-2xl">
                 {isArabic
-                  ? 'لأكثر من عقد من الزمان، تقدم بختيار للرعاية الصحية توجيهاً شخصياً للمرضى الدوليين وعائلاتهم لتنسيق العلاج في الهند عبر نخبة المستشفيات، والأطباء الاستشاريين، والدعم الميداني المتكامل.'
-                  : 'For more than a decade, Baxtiyor Healthcare has helped international patients and families coordinate medical treatment in India through selected hospitals, experienced specialists and personalized patient support.'}
+                  ? 'منذ عام 2017، تقدم بختيار للرعاية الصحية توجيهاً شخصياً موثوقاً للمرضى الدوليين وعائلاتهم لتنسيق العلاج في الهند عبر نخبة المستشفيات المعتمدة، والأطباء الاستشاريين، والدعم الميداني المتكامل.'
+                  : 'Since 2017, Baxtiyor Healthcare has helped international patients and families coordinate medical treatment in India through selected hospitals, experienced specialists, and dedicated patient support.'}
               </p>
 
               {/* CTAs */}
@@ -537,12 +546,89 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div>
       </section>
 
-      {/* 8. Country Pathways */}
+      {/* 8. Real Patient Journeys Media Gallery */}
+      <HomepageMediaGallery items={mediaItems} locale={currentLocale} />
+
+      {/* 9. Official YouTube Channel Showcase */}
+      <section className="bg-slate-50 py-16 border-y border-brand-border/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold mb-2">
+                <Youtube className="w-4 h-4 text-red-600 fill-current" />
+                <span>@baxtiyorindiya</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-brand-navy tracking-tight">
+                {isArabic ? 'شاهد بالفيديو: جولات المستشفيات والمقابلات الطبية' : 'Watch on YouTube: Hospital Tours & Doctor Discussions'}
+              </h2>
+              <p className="text-sm text-brand-text-secondary mt-1">
+                {isArabic
+                  ? 'جولات ميدانية في معهد فورتيس، أرتيميس، وشالبي سانار، مع شروحات طبية دقيقة وإجراءات الاستقبال.'
+                  : 'Authentic hospital walk-throughs, transplant protocols, and international patient assistance in Delhi NCR.'}
+              </p>
+            </div>
+
+            <a
+              href="https://youtube.com/@baxtiyorindiya"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md shrink-0"
+            >
+              <Youtube className="w-4 h-4 fill-current" />
+              <span>{isArabic ? 'اشترك في القناة الرسمية' : 'Subscribe to @baxtiyorindiya'}</span>
+            </a>
+          </div>
+
+          {videos.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+              {videos.slice(0, 3).map((vid) => (
+                <YouTubeVideoCard
+                  key={vid.id}
+                  videoId={vid.youtubeVideoId}
+                  title={isArabic && vid.titleAr ? vid.titleAr : vid.title}
+                  description={isArabic && vid.descriptionAr ? vid.descriptionAr : vid.description}
+                  category={vid.category}
+                  thumbnailUrl={vid.thumbnailUrl}
+                  locale={currentLocale}
+                  uploadDate={vid.createdAt ? vid.createdAt.split('T')[0] : '2024-03-01'}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-brand-border p-8 sm:p-12 text-center space-y-4 max-w-2xl mx-auto shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto">
+                <Youtube className="w-8 h-8 fill-current" />
+              </div>
+              <h3 className="text-xl font-bold text-brand-navy">
+                {isArabic ? 'قناة بختيار للرعاية الصحية في الهند' : 'Baxtiyor Healthcare Official YouTube Channel'}
+              </h3>
+              <p className="text-xs sm:text-sm text-brand-text-secondary leading-relaxed">
+                {isArabic
+                  ? 'تابع شروحات تفصيلية عن جراحات الركبة والقلب وزراعة الكلى، وجولات واقعية داخل غرف المرضى وصالات الاستقبال في دلهي وجورجاون.'
+                  : 'Watch video guides on organ transplants, robotic surgeries, hospital walkthroughs, and airport reception procedures on our verified channel.'}
+              </p>
+              <div className="pt-2">
+                <a
+                  href="https://youtube.com/@baxtiyorindiya"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md"
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  <span>{isArabic ? 'فتح القناة على يوتيوب' : 'Explore Videos on YouTube'}</span>
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 10. Country Pathways */}
       <section className="bg-brand-bg py-16 border-y border-brand-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-brand-navy tracking-tight">
-              {isArabic ? 'دليل المرضى حسب الدولة' : 'Tailored Care by Country of Residence'}
+              {isArabic ? 'مسارات الرعاية المخصصة حسب دولة الإقامة' : 'Tailored Care by Country of Residence'}
             </h2>
             <p className="text-sm text-brand-text-secondary">
               {isArabic
@@ -570,7 +656,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div>
       </section>
 
-      {/* 9. FAQs Section */}
+      {/* 11. FAQs Section */}
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10 space-y-2">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-brand-navy tracking-tight">
@@ -601,7 +687,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div>
       </section>
 
-      {/* 10. Final Conversion CTA Banner */}
+      {/* 12. Final Conversion CTA Banner */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-brand-navy text-white rounded-2xl p-8 sm:p-12 lg:p-16 shadow-xl relative overflow-hidden text-center space-y-6">
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight max-w-2xl mx-auto">

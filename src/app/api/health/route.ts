@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { isFirebaseAdminConfigured } from '@/lib/firebase/admin';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const startTime = process.uptime();
@@ -16,8 +19,16 @@ export async function GET() {
     fs.writeFileSync(testFile, Date.now().toString(), 'utf8');
     fs.unlinkSync(testFile);
     storageStatus = 'writable';
-  } catch (err) {
+  } catch {
     storageStatus = 'read-only-or-error';
+  }
+
+  // Safe server-side check for Firebase Admin without exposing credentials
+  let firebaseAdminStatus = 'unconfigured';
+  try {
+    firebaseAdminStatus = isFirebaseAdminConfigured() ? 'operational' : 'unconfigured';
+  } catch {
+    firebaseAdminStatus = 'error';
   }
 
   const payload = {
@@ -27,6 +38,7 @@ export async function GET() {
     version: '2.0.0',
     uptimeSeconds: Math.floor(startTime),
     storage: storageStatus,
+    firebaseAdmin: firebaseAdminStatus,
     locales: ['en', 'ar'],
     environment: process.env.NODE_ENV || 'production',
   };
